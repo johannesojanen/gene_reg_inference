@@ -1,4 +1,5 @@
-# Gene Regulatory Network Inference from Time-Series Data Using a Dynamic Bayesian Network
+# Inference of Transcriptional Regulatory Networks from Time-Series Data Using Dynamic Bayesian Networks
+
 
 This project implements a **Dynamic Bayesian Network (DBN)** to infer the structure of a 5-gene transcriptional regulatory network using time-course gene expression data from Cantone et al. (2009).
 
