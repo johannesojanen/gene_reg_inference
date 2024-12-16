@@ -78,7 +78,7 @@ class DynamicBayesianNetworkModel:
 
         score_df = pd.DataFrame(scores, index=self.genes, columns=self.genes)
         # set diagonal to NaN so we don't consider self-self edges
-        np.fill_diagonal(score_df.values, 0)
+        # np.fill_diagonal(score_df.values, 0)
         self.score_matrix = score_df
 
     def get_scores(self):
