@@ -60,18 +60,29 @@ def evaluate_thresholds(true_structure: pd.DataFrame, inferred_structures: dict)
     # Compute area under ROC curve
     auc_value = auc(roc_df['fpr'], roc_df['tpr'])
 
-    # Find threshold that ensures all interactions are found (tpr=1)
+    # Find all thresholds that ensure all interactions are found (tpr=1)
     full_detection = roc_df[roc_df['tpr'] == 1.0]
     if not full_detection.empty:
-        # Choose threshold that minimizes fp_count among those with tpr=1
-        best_row = full_detection.iloc[full_detection['fp_count'].argmin()]
+        # Find the minimum and maximum thresholds among those that achieve full detection
+        min_threshold = full_detection['threshold'].min()
+        max_threshold = full_detection['threshold'].max()
+
+        # Find the threshold with the minimum number of false positives
+        best_row = full_detection.loc[full_detection['fp_count'].idxmin()]
         threshold_for_full_detection = best_row['threshold']
         false_positives_at_that_threshold = best_row['fp_count']
     else:
         threshold_for_full_detection = None
         false_positives_at_that_threshold = None
+        min_threshold = None
+        max_threshold = None
 
-    return roc_df, auc_value, (threshold_for_full_detection, false_positives_at_that_threshold)
+    return roc_df, auc_value, {
+        'best_threshold': threshold_for_full_detection,
+        'false_positives': false_positives_at_that_threshold,
+        'min_threshold': min_threshold,
+        'max_threshold': max_threshold
+    }
 
 
 def evaluate_model(model, true_structure, above=True, below=False):
@@ -107,22 +118,59 @@ def evaluate_model(model, true_structure, above=True, below=False):
     roc_df, auc_value, full_detection_info = evaluate_thresholds(true_structure, inferred_structures)
 
     # Plot ROC curve
-    plt.figure(figsize=(6, 6))
-    plt.plot(roc_df['fpr'], roc_df['tpr'], marker='o', label=f'auc = {auc_value:.2f}')
-    plt.title('ROC Curve')
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.legend()
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    # Optional: Set a seaborn style for better aesthetics
+    # sns.set(style='whitegrid')
+
+    # Plot ROC curve
+    plt.figure(figsize=(8, 8))
+    plt.plot(
+        roc_df['fpr'],
+        roc_df['tpr'],
+        color='darkorange',
+        lw=2,
+        label=f'ROC curve (AUC = {auc_value:.2f})'
+    )
+
+    # Plot the diagonal line for a random classifier
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Midline')
+
+    # Customize the plot
+    plt.title('Receiver Operating Characteristic (ROC) Curve', fontsize=16)
+    plt.xlabel('False Positive Rate', fontsize=14)
+    plt.ylabel('True Positive Rate', fontsize=14)
+    plt.legend(loc='lower right', fontsize=12)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+
+    # Add gridlines
+    plt.grid(True, linestyle='--', alpha=0.5)
+
+    # Enhance tick parameters
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+
+    # Show the plot
+    plt.tight_layout()
     plt.show()
 
-    # Print threshold for full detection
-    threshold_for_full_detection, false_positives_at_that_threshold = full_detection_info
-    if threshold_for_full_detection is not None:
-        print(f"Threshold for detecting all true interactions: {threshold_for_full_detection}")
-        print(f"False positives at that threshold: {false_positives_at_that_threshold}")
+    # Print thresholds related to full detection
+    best_threshold = full_detection_info['best_threshold']
+    false_positives_at_best = full_detection_info['false_positives']
+    min_threshold = full_detection_info['min_threshold']
+    max_threshold = full_detection_info['max_threshold']
+
+    if best_threshold is not None:
+        print(f"Best Threshold for Full Detection: {best_threshold}")
+        print(f"False Positives at Best Threshold: {false_positives_at_best}")
+        print(f"Minimum Threshold for Full Detection: {min_threshold}")
+        print(f"Maximum Threshold for Full Detection: {max_threshold}")
 
         # Display the best inferred structure
-        best_structure = inferred_structures[threshold_for_full_detection].copy()
+        best_structure = inferred_structures[best_threshold].copy()
 
         # Create a mask to exclude diagonal entries
         mask = ~np.eye(best_structure.shape[0], dtype=bool)
